@@ -26,9 +26,10 @@ interface LoginCancel {
 function waitForCallback(
   server: http.Server,
   expectedState: string,
+  signal: AbortSignal,
 ): Promise<LoginResult | LoginCancel> {
   return new Promise((resolve) => {
-    server.on("request", (req, res) => {
+    const handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
       const url = new URL(req.url ?? "/", `http://localhost:${CALLBACK_PORT}`);
 
       if (url.pathname !== "/callback") return;
@@ -76,31 +77,42 @@ function waitForCallback(
         "<html><body><h1>Logged in!</h1><p>You can close this tab and return to the terminal.</p></body></html>",
       );
       resolve({ type: "success", token, convexUrl, email: email ?? undefined });
-    });
+    };
+
+    server.on("request", handler);
+    signal.addEventListener("abort", () =>
+      server.removeListener("request", handler),
+    );
   });
 }
 
-function waitForCancel(): Promise<LoginCancel> {
+function waitForCancel(signal: AbortSignal): Promise<LoginCancel> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin });
+    const cleanup = () => rl.close();
+
     rl.once("line", () => {
-      rl.close();
+      cleanup();
       resolve({ type: "cancelled", message: "Login cancelled." });
     });
     rl.once("close", () => {
       resolve({ type: "cancelled", message: "Login cancelled." });
     });
+
+    signal.addEventListener("abort", cleanup);
   });
 }
 
-function waitForTimeout(ms: number): Promise<LoginCancel> {
+function waitForTimeout(ms: number, signal: AbortSignal): Promise<LoginCancel> {
   return new Promise((resolve) => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       resolve({
         type: "timeout",
         message: "Login timed out (5 minutes). Try again.",
       });
     }, ms);
+
+    signal.addEventListener("abort", () => clearTimeout(timer));
   });
 }
 
@@ -139,12 +151,15 @@ export async function login(): Promise<void> {
   console.log(chalk.dim("Press Enter to cancel.\n"));
   open(authUrl);
 
+  const ac = new AbortController();
+
   const result = await Promise.race([
-    waitForCallback(server, state),
-    waitForCancel(),
-    waitForTimeout(LOGIN_TIMEOUT_MS),
+    waitForCallback(server, state, ac.signal),
+    waitForCancel(ac.signal),
+    waitForTimeout(LOGIN_TIMEOUT_MS, ac.signal),
   ]);
 
+  ac.abort();
   server.close();
 
   if (result.type === "success") {
