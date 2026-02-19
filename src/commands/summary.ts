@@ -42,12 +42,15 @@ export async function weekSummary(): Promise<void> {
     for (const day of week.days) {
       const bar = "█".repeat(Math.round(day.hours * 2));
       const isToday = day.date === new Date().toISOString().split("T")[0];
-      const label = isToday ? chalk.bold(day.dayName) : day.dayName;
-      const hours =
-        day.hours > 0 ? chalk.cyan(day.hours.toFixed(1) + "h") : chalk.dim("—");
+      const paddedName = day.dayName.padEnd(5);
+      const label = isToday ? chalk.bold(paddedName) : paddedName;
+      const hoursText =
+        day.hours > 0 ? day.hours.toFixed(1) + "h" : "—";
+      const paddedHours = hoursText.padStart(6);
+      const hours = day.hours > 0 ? chalk.cyan(paddedHours) : chalk.dim(paddedHours);
 
       console.log(
-        `  ${label.padEnd(isToday ? 13 : 9)} ${hours.padStart(10)}  ${chalk.green(bar)}`,
+        `  ${label}  ${hours}  ${chalk.green(bar)}`,
       );
     }
 
