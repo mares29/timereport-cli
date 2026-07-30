@@ -47,6 +47,10 @@ program
   )
   .option("-p, --project <name>", "Project name")
   .option("-t, --task <name>", "Task name")
+  .option(
+    "-d, --date <date>",
+    'Entry date (YYYY-MM-DD, "today", or "yesterday")',
+  )
   .action(logEntry);
 
 program

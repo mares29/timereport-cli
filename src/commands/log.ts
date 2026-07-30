@@ -2,14 +2,16 @@ import chalk from "chalk";
 import ora from "ora";
 import { getClient } from "../client.js";
 import { parseDuration, formatDuration } from "../duration.js";
+import {
+  formatLogDate,
+  resolveLogTimeRange,
+} from "../log-date.js";
 
 export async function logEntry(
   duration: string,
   description: string,
-  options: { project?: string; task?: string },
+  options: { project?: string; task?: string; date?: string },
 ): Promise<void> {
-  const client = getClient();
-
   let durationMs: number;
   try {
     durationMs = parseDuration(duration);
@@ -20,6 +22,17 @@ export async function logEntry(
     return;
   }
 
+  let timeRange: { startTime: number; endTime: number };
+  try {
+    timeRange = resolveLogTimeRange(durationMs, options.date);
+  } catch (err) {
+    console.error(
+      chalk.red(err instanceof Error ? err.message : "Invalid date"),
+    );
+    return;
+  }
+
+  const client = getClient();
   const spinner = ora("Logging time entry...").start();
 
   try {
@@ -40,20 +53,20 @@ export async function logEntry(
       projectId = match._id;
     }
 
-    const endTime = Date.now();
-    const startTime = endTime - durationMs;
-
     await client.mutation("timers:createManualEntry", {
       taskName: options.task || description,
       taskDescription: description,
       projectId,
-      startTime,
-      endTime,
+      startTime: timeRange.startTime,
+      endTime: timeRange.endTime,
     });
 
     spinner.succeed(
       chalk.green(`Logged ${formatDuration(durationMs)}: ${description}`) +
-        (options.project ? chalk.dim(` (${options.project})`) : ""),
+        (options.project ? chalk.dim(` (${options.project})`) : "") +
+        (options.date
+          ? chalk.dim(` on ${formatLogDate(timeRange.endTime)}`)
+          : ""),
     );
   } catch (err) {
     spinner.fail(

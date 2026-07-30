@@ -34,9 +34,15 @@ timereport stop
 ```bash
 timereport log 1h30m "Code review" -p "My Project"
 timereport log 45m "Standup meeting"
+timereport log 2h "Feature work" --date yesterday
+timereport log 1h "Client call" --date 2026-07-12
 ```
 
 Duration format: `1h30m`, `2h`, `45m`, `1.5h`
+
+Use `--date` (or `-d`) to log time on a past local calendar date. Accepted
+values are `YYYY-MM-DD`, `today`, and `yesterday`. Without `--date`, the entry
+ends at the current time as before.
 
 ### Status & summaries
 
