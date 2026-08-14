@@ -17,6 +17,10 @@ timereport login
 ```
 
 Opens your browser to authenticate. Credentials are stored in `~/.config/timereport/`.
+The browser sends a short-lived one-time code protected by PKCE; session tokens
+never pass through the localhost callback URL. The CLI refreshes its one-hour
+access token automatically. The separate CLI session lasts up to 30 days by
+default, or until logout or server-side revocation.
 
 ## Usage
 

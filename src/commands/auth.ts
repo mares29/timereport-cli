@@ -1,9 +1,20 @@
-import crypto from "node:crypto";
 import http from "node:http";
 import readline from "node:readline";
 import chalk from "chalk";
 import open from "open";
-import { writeConfig, clearConfig, readConfig } from "../config.js";
+import {
+  writeConfig,
+  clearConfig,
+  readConfig,
+  withConfigLock,
+} from "../config.js";
+import {
+  createPkceLoginProof,
+  errorMessage,
+  isAuthorizationCode,
+  SessionExpiredError,
+} from "../auth-session.js";
+import { exchangeAuthorizationCode, getClient } from "../client.js";
 
 const CONVEX_URL_PATTERN = /^https:\/\/[a-z0-9-]+\.convex\.cloud$/;
 
@@ -13,9 +24,8 @@ const LOGIN_TIMEOUT_MS = 300_000;
 
 interface LoginResult {
   type: "success";
-  token: string;
+  code: string;
   convexUrl: string;
-  email?: string;
 }
 
 interface LoginCancel {
@@ -32,51 +42,55 @@ function waitForCallback(
     const handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
       const url = new URL(req.url ?? "/", `http://localhost:${CALLBACK_PORT}`);
 
-      if (url.pathname !== "/callback") return;
-
-      const state = url.searchParams.get("state");
-      if (state !== expectedState) {
-        res.writeHead(403, { "Content-Type": "text/html" });
-        res.end(
-          "<html><body><h1>Authentication failed.</h1><p>Invalid state parameter. You can close this tab.</p></body></html>",
-        );
-        resolve({
-          type: "error",
-          message: "Invalid state parameter — possible CSRF attack",
-        });
+      if (url.pathname !== "/callback") {
+        res.writeHead(404).end();
         return;
       }
 
-      const token = url.searchParams.get("token");
-      const convexUrl = url.searchParams.get("convexUrl");
-      const email = url.searchParams.get("email");
+      const responseHeaders = {
+        "Content-Type": "text/html",
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer",
+      };
 
-      if (!token || !convexUrl) {
-        res.writeHead(400, { "Content-Type": "text/html" });
+      if (req.method !== "GET") {
+        res.writeHead(405, responseHeaders);
+        res.end("<html><body><h1>Method not allowed.</h1></body></html>");
+        return;
+      }
+
+      const state = url.searchParams.get("state");
+      if (state !== expectedState) {
+        res.writeHead(403, responseHeaders);
         res.end(
-          "<html><body><h1>Authentication failed.</h1><p>Missing token. You can close this tab.</p></body></html>",
+          "<html><body><h1>Authentication failed.</h1><p>Invalid state parameter. You can close this tab.</p></body></html>",
         );
-        resolve({ type: "error", message: "Missing token in callback" });
+        return;
+      }
+
+      const code = url.searchParams.get("code");
+      const convexUrl = url.searchParams.get("convexUrl");
+      if (!code || !isAuthorizationCode(code) || !convexUrl) {
+        res.writeHead(400, responseHeaders);
+        res.end(
+          "<html><body><h1>Authentication failed.</h1><p>Missing or invalid authorization code. You can close this tab.</p></body></html>",
+        );
         return;
       }
 
       if (!CONVEX_URL_PATTERN.test(convexUrl)) {
-        res.writeHead(400, { "Content-Type": "text/html" });
+        res.writeHead(400, responseHeaders);
         res.end(
           "<html><body><h1>Authentication failed.</h1><p>Invalid server URL. You can close this tab.</p></body></html>",
         );
-        resolve({
-          type: "error",
-          message: `Rejected invalid Convex URL: ${convexUrl}`,
-        });
         return;
       }
 
-      res.writeHead(200, { "Content-Type": "text/html" });
+      res.writeHead(200, responseHeaders);
       res.end(
-        "<html><body><h1>Logged in!</h1><p>You can close this tab and return to the terminal.</p></body></html>",
+        "<html><body><h1>Authorization received.</h1><p>You can close this tab and return to the terminal.</p></body></html>",
       );
-      resolve({ type: "success", token, convexUrl, email: email ?? undefined });
+      resolve({ type: "success", code, convexUrl });
     };
 
     server.on("request", handler);
@@ -119,12 +133,28 @@ function waitForTimeout(ms: number, signal: AbortSignal): Promise<LoginCancel> {
 export async function login(): Promise<void> {
   const existing = readConfig();
   if (existing) {
-    console.log(
-      chalk.yellow(
-        "Already logged in. Run `timereport logout` first to switch accounts.",
-      ),
-    );
-    return;
+    try {
+      const authenticated = await getClient().query("auth:isAuthenticated", {});
+      if (authenticated) {
+        console.log(
+          chalk.yellow(
+            "Already logged in. Run `timereport logout` first to switch accounts.",
+          ),
+        );
+        return;
+      }
+      clearConfig();
+    } catch (error) {
+      if (error instanceof SessionExpiredError) {
+        clearConfig();
+        console.log(chalk.dim("Stored session expired. Starting a new login."));
+      } else {
+        console.error(
+          chalk.red(`Could not verify stored session: ${errorMessage(error)}`),
+        );
+        return;
+      }
+    }
   }
 
   const server = http.createServer();
@@ -143,13 +173,17 @@ export async function login(): Promise<void> {
     return;
   }
 
-  const state = crypto.randomBytes(32).toString("hex");
-  const callbackUrl = `http://localhost:${CALLBACK_PORT}/callback`;
-  const authUrl = `${APP_URL}/cli-auth?callback=${encodeURIComponent(callbackUrl)}&state=${state}`;
+  const { state, codeVerifier, codeChallenge } = createPkceLoginProof();
+  const callbackUrl = `http://127.0.0.1:${CALLBACK_PORT}/callback`;
+  const authUrl = new URL("/cli-auth-v2", APP_URL);
+  authUrl.searchParams.set("callback", callbackUrl);
+  authUrl.searchParams.set("state", state);
+  authUrl.searchParams.set("codeChallenge", codeChallenge);
+  authUrl.searchParams.set("protocol", "2");
 
   console.log(chalk.dim("Opening browser for login..."));
   console.log(chalk.dim("Press Enter to cancel.\n"));
-  open(authUrl);
+  open(authUrl.toString());
 
   const ac = new AbortController();
 
@@ -163,22 +197,45 @@ export async function login(): Promise<void> {
   server.close();
 
   if (result.type === "success") {
-    writeConfig({ convexUrl: result.convexUrl, token: result.token });
-    console.log(
-      chalk.green(`Logged in${result.email ? ` as ${result.email}` : ""}.`),
-    );
+    try {
+      const tokens = await exchangeAuthorizationCode(
+        result.convexUrl,
+        result.code,
+        codeVerifier,
+      );
+      writeConfig({ convexUrl: result.convexUrl, ...tokens });
+      console.log(chalk.green("Logged in."));
+    } catch (error) {
+      console.error(
+        chalk.red(`Authentication failed: ${errorMessage(error)}`),
+      );
+    }
   } else {
     console.log(chalk.yellow(result.message));
   }
 }
 
-export function logout(): void {
+export async function logout(): Promise<void> {
   const config = readConfig();
   if (!config) {
     console.log(chalk.yellow("Not logged in."));
     return;
   }
 
-  clearConfig();
-  console.log(chalk.green("Logged out."));
+  let remoteError: unknown = null;
+  try {
+    await getClient().action("auth:signOut", {});
+  } catch (error) {
+    remoteError = error;
+  }
+
+  await withConfigLock(async () => clearConfig());
+  if (remoteError) {
+    console.log(chalk.yellow("Local credentials cleared."));
+    console.log(
+      chalk.yellow(`Server session could not be revoked: ${errorMessage(remoteError)}`),
+    );
+  } else {
+    console.log(chalk.green("Logged out."));
+  }
 }
