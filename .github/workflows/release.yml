@@ -213,12 +213,12 @@ jobs:
           set -euo pipefail
           archive="timereport-cli-${GITHUB_REF_NAME#v}.tgz"
           if [[ "$NPM_DIST_TAG" == "next" ]]; then
-            npm publish "release/$archive" \
+            npm publish "./release/$archive" \
               --access public \
               --ignore-scripts \
               --tag "$NPM_DIST_TAG"
           else
-            npm publish "release/$archive" \
+            npm publish "./release/$archive" \
               --access public \
               --ignore-scripts
           fi
