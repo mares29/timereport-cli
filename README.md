@@ -4,18 +4,11 @@
 
 CLI for [timereport.app](https://timereport.app) — manage timers, log time, and view summaries from the terminal.
 
-## Install from source
+## Install
 
 ```bash
-git clone https://github.com/mares29/timereport-cli.git
-cd timereport-cli
-npm ci --ignore-scripts
-npm run build
-npm link
+npm install --global timereport-cli
 ```
-
-The npm package is not published yet. An `npm install -g` command will be added
-only after the first verified publication.
 
 Requires Node.js 20+.
 

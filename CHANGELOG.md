@@ -7,6 +7,14 @@ notes are generated automatically from merged pull requests.
 
 ## Unreleased
 
+## 0.1.1 - 2026-08-14
+
+### Fixed
+
+- Document the published npm installation command.
+
+## 0.1.0 - 2026-08-14
+
 ### Added
 
 - Browser login protected by a short-lived one-time code and PKCE.
