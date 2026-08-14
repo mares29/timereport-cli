@@ -10,13 +10,14 @@ import {
 import { logEntry } from "./commands/log.js";
 import { status } from "./commands/status.js";
 import { todaySummary, weekSummary } from "./commands/summary.js";
+import { VERSION } from "./version.js";
 
 const program = new Command();
 
 program
   .name("timereport")
   .description("CLI for timereport.app")
-  .version("0.1.0");
+  .version(VERSION);
 
 program.command("login").description("Log in via browser").action(login);
 

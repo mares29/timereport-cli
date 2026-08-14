@@ -1,14 +1,23 @@
 # timereport-cli
 
+[![CI](https://github.com/mares29/timereport-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/mares29/timereport-cli/actions/workflows/ci.yml)
+
 CLI for [timereport.app](https://timereport.app) — manage timers, log time, and view summaries from the terminal.
 
-## Install
+## Install from source
 
 ```bash
-npm install -g timereport-cli
+git clone https://github.com/mares29/timereport-cli.git
+cd timereport-cli
+npm ci --ignore-scripts
+npm run build
+npm link
 ```
 
-Requires Node.js 18+.
+The npm package is not published yet. An `npm install -g` command will be added
+only after the first verified publication.
+
+Requires Node.js 20+.
 
 ## Setup
 
@@ -70,7 +79,13 @@ npm install
 npm run build       # compile TypeScript
 npm run dev         # watch mode
 npm test            # run tests
+npm run check       # test and compile
+npm run release:check # validate the releasable package
+npm run publish:check # validate an npm publication without publishing
 ```
+
+Maintainers: see [docs/RELEASING.md](docs/RELEASING.md) for the SemVer, tag,
+GitHub Release, and npm publication process.
 
 ## License
 

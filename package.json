@@ -2,23 +2,56 @@
   "name": "timereport-cli",
   "version": "0.1.0",
   "description": "CLI for timereport.app — manage timers, log time, view summaries",
+  "keywords": [
+    "cli",
+    "time-tracking",
+    "timesheet",
+    "productivity",
+    "timereport"
+  ],
+  "homepage": "https://github.com/mares29/timereport-cli#readme",
+  "bugs": {
+    "url": "https://github.com/mares29/timereport-cli/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mares29/timereport-cli.git"
+  },
+  "author": "Karel Mareš",
   "type": "module",
   "bin": {
-    "timereport": "./dist/index.js"
+    "timereport": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "npm run clean && tsc",
+    "check": "npm test && npm run build",
+    "clean": "node scripts/clean.mjs",
     "dev": "tsc --watch",
+    "prepack": "npm run build",
+    "preversion": "npm run release:check",
+    "publish:check": "npm run release:check && npm publish --dry-run --ignore-scripts",
+    "release:check": "npm run check && npm pack --dry-run --ignore-scripts",
+    "release:major": "npm version major",
+    "release:minor": "npm version minor",
+    "release:patch": "npm version patch",
     "start": "node dist/index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify:package-archive": "node scripts/verify-package-archive.mjs",
+    "verify:release-tag": "node scripts/verify-release-tag.mjs",
+    "verify:version-order": "node scripts/verify-version-order.mjs"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "license": "MIT",
   "dependencies": {
     "chalk": "^5.6.2",
@@ -30,6 +63,6 @@
   "devDependencies": {
     "@types/node": "^25.2.1",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.10"
   }
 }
