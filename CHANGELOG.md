@@ -7,6 +7,8 @@ notes are generated automatically from merged pull requests.
 
 ## Unreleased
 
+## 0.2.0 - 2026-10-28
+
 ### Added
 
 - `timereport list --from/--to` and `timereport month [YYYY-MM]` to list time

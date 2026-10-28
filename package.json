@@ -1,6 +1,6 @@
 {
   "name": "timereport-cli",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "CLI for timereport.app — manage timers, log time, view summaries",
   "keywords": [
     "cli",
