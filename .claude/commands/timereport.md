@@ -113,6 +113,31 @@ Output includes:
 - Hours per day with a bar chart
 - Weekly total
 
+### `timereport list`
+
+List time entries in a date range, grouped by day with daily and overall totals.
+
+```
+timereport list
+timereport list --from 2026-09-01 --to 2026-09-15
+timereport list --from yesterday -p Acme
+```
+
+| Flag                   | Description                                                  |
+| ---------------------- | ------------------------------------------------------------ |
+| `--from <date>`        | Start date (`YYYY-MM-DD`, `today`, `yesterday`); default: 1st of current month |
+| `--to <date>`          | End date, inclusive; default: today                          |
+| `-p, --project <name>` | Filter by project (case-insensitive lookup)                  |
+
+### `timereport month [YYYY-MM]`
+
+List all entries for a month (defaults to the current month). Accepts `-p, --project <name>`.
+
+```
+timereport month
+timereport month 2026-09
+```
+
 ### `timereport login`
 
 Authenticate via browser OAuth. Opens a browser window.

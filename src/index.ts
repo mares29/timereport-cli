@@ -10,6 +10,7 @@ import {
 import { logEntry } from "./commands/log.js";
 import { status } from "./commands/status.js";
 import { todaySummary, weekSummary } from "./commands/summary.js";
+import { listEntries, monthEntries } from "./commands/list.js";
 import { VERSION } from "./version.js";
 
 const program = new Command();
@@ -68,5 +69,19 @@ program
   .command("week")
   .description("Weekly hours breakdown")
   .action(weekSummary);
+
+program
+  .command("list")
+  .description("List time entries in a date range (defaults to this month)")
+  .option("--from <date>", 'Start date (YYYY-MM-DD, "today", or "yesterday")')
+  .option("--to <date>", 'End date, inclusive (defaults to today)')
+  .option("-p, --project <name>", "Filter by project")
+  .action(listEntries);
+
+program
+  .command("month [month]")
+  .description("List time entries for a month (YYYY-MM, defaults to current)")
+  .option("-p, --project <name>", "Filter by project")
+  .action(monthEntries);
 
 program.parse();
