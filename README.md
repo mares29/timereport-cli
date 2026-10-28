@@ -58,6 +58,19 @@ timereport today    # today's breakdown
 timereport week     # weekly bar chart
 ```
 
+### Listing entries
+
+```bash
+timereport list                                  # this month so far
+timereport list --from 2026-09-01 --to 2026-09-15
+timereport list --from yesterday -p Acme         # filter by project
+timereport month                                 # current month
+timereport month 2026-09                         # a specific month
+```
+
+Entries are grouped by day with daily and overall totals. `--from`/`--to`
+accept `YYYY-MM-DD`, `today`, and `yesterday`; both ends are inclusive.
+
 ### Auth
 
 ```bash

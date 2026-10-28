@@ -7,6 +7,11 @@ notes are generated automatically from merged pull requests.
 
 ## Unreleased
 
+### Added
+
+- `timereport list --from/--to` and `timereport month [YYYY-MM]` to list time
+  entries in a date range, grouped by day with totals.
+
 ## 0.1.2 - 2026-08-14
 
 ### Fixed

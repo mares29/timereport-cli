@@ -26,12 +26,14 @@ src/
   client.ts         — Convex HTTP client wrapper with auth
   config.ts         — Config file read/write (~/.config/timereport/)
   duration.ts       — Duration parsing/formatting (1h30m format)
+  date-range.ts     — --from/--to and month range resolution, day grouping
   commands/
     auth.ts         — Login (browser OAuth callback) / logout
     timer.ts        — start/stop/pause/resume timers
     log.ts          — Manual time entry logging
     status.ts       — Active timer + today summary
     summary.ts      — Today/week breakdowns
+    list.ts         — Date-range / month entry listing
 ```
 
 ## Conventions
@@ -46,11 +48,11 @@ src/
 
 ## Convex API Surface
 
-Queries: `timers:getActiveTimer`, `timers:getTodaySummary`, `timers:getWeeklyHours`, `projects:getAllProjects`
+Queries: `timers:getActiveTimer`, `timers:getTodaySummary`, `timers:getWeeklyHours`, `projects:getAllProjects`, `timeEntryQueries:getTimeEntriesByDateRange`
 Mutations: `timers:startTimer`, `timers:stopTimer`, `timers:pauseTimer`, `timers:resumeTimer`, `timers:createManualEntry`
 
 ## Testing
 
 - Tests co-located with source (`*.test.ts` in `src/`)
 - Config tests use `os.tmpdir()` with env var override
-- Only pure logic tested currently (config, duration) — command handlers untested
+- Only pure logic tested currently (config, duration, date-range) — command handlers untested
